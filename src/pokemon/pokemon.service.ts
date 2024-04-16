@@ -34,7 +34,6 @@ export class PokemonService {
       if (porkemons.length < 1) {
         return 'Empty[]'
       } else {
-
         return {
           status: "success",
           results: porkemons.length,
@@ -55,6 +54,9 @@ export class PokemonService {
 
     if (!isNaN(+term)) {
       pokenFound = await this.pokemonModel.findOne({ no: term });
+      if(!pokenFound){
+        throw new NotFoundException(`Pokemon not Found with No:${term}`);
+      }
       return pokenFound
     }
 
@@ -89,8 +91,6 @@ export class PokemonService {
     } catch (error) {
       this.handleExceptions(error);
     }
-
-
   }
 
 
