@@ -1,8 +1,11 @@
 import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
 import { CreatePokemonDto, UpdatePokemonDto } from './dto';
 import { Pokemon } from './entities/pokemon.entity'
 import { Model, isValidObjectId } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
+import { PaginationDto } from 'src/common/dto/pagination.dto';
 
 @Injectable()
 
@@ -11,7 +14,9 @@ export class PokemonService {
 
   constructor(
     @InjectModel(Pokemon.name)
-    private readonly pokemonModel: Model<Pokemon>
+    private readonly pokemonModel: Model<Pokemon>,
+
+    private readonly configService: ConfigService,
   ) { }
 
 
@@ -27,10 +32,10 @@ export class PokemonService {
 
 
 
-  async findAll() {
-
+  async findAll(paginationDto:PaginationDto) {
     try {
-      const porkemons = await this.pokemonModel.find();
+      const {limit = this.configService.get<number>('defaultLimit'), offset =  0} = paginationDto;
+      const porkemons = await this.pokemonModel.find().limit(limit).skip(offset).sort({no:1}).select('-__v');
       if (porkemons.length < 1) {
         return 'Empty[]'
       } else {
@@ -54,7 +59,7 @@ export class PokemonService {
 
     if (!isNaN(+term)) {
       pokenFound = await this.pokemonModel.findOne({ no: term });
-      if(!pokenFound){
+      if (!pokenFound) {
         throw new NotFoundException(`Pokemon not Found with No:${term}`);
       }
       return pokenFound
@@ -99,19 +104,19 @@ export class PokemonService {
 
   async remove(id: string) {
 
-      const {deletedCount} = await this.pokemonModel.deleteOne({_id:id});
+    const { deletedCount } = await this.pokemonModel.deleteOne({ _id: id });
 
-        if(deletedCount === 0){
-          throw new BadRequestException(`Pokemon with id "${id}" not found`)
-        }
+    if (deletedCount === 0) {
+      throw new BadRequestException(`Pokemon with id "${id}" not found`)
+    }
 
-      return deletedCount;
+    return deletedCount;
 
   }
 
 
 
-  private handleExceptions(error: any){
+  private handleExceptions(error: any) {
     if (error.code === 11000) {
       console.log(error)
       throw new BadRequestException(`This PokeUser alreadt exist in DB ${JSON.stringify(error.keyValue)} `)
